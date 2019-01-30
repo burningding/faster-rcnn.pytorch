@@ -30,7 +30,8 @@ from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
       adjust_learning_rate, save_checkpoint, clip_gradient
 
-from model.faster_rcnn.vgg16 import vgg16
+from model.faster_rcnn.vgg16 import vgg16 as vgg16_gt
+from model.faster_rcnn_aod_gan.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
 def parse_args():
@@ -68,7 +69,7 @@ def parse_args():
                       action='store_true')
   parser.add_argument('--ls', dest='large_scale',
                       help='whether use large imag scale',
-                      action='store_true')                      
+                      action='store_true')
   parser.add_argument('--mGPUs', dest='mGPUs',
                       help='whether use multiple GPUs',
                       action='store_true')
@@ -254,6 +255,15 @@ if __name__ == '__main__':
 
   fasterRCNN.create_architecture()
 
+  # initialize the gt pooling feature network
+  fasterRCNN_gt = vgg16_gt(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic)
+  fasterRCNN_gt.create_architecture()
+  print("load checkpoint %s" % (load_name))
+  checkpoint = torch.load(load_name)
+  fasterRCNN_gt.load_state_dict(checkpoint['model'])
+
+
+
   lr = cfg.TRAIN.LEARNING_RATE
   lr = args.lr
   #tr_momentum = cfg.TRAIN.MOMENTUM
@@ -311,6 +321,7 @@ if __name__ == '__main__':
     for step in range(iters_per_epoch):
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
+      #gt_im_data
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
       num_boxes.data.resize_(data[3].size()).copy_(data[3])

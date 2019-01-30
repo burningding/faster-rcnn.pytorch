@@ -178,6 +178,7 @@ if __name__ == '__main__':
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
+  gt_im_data = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -185,12 +186,14 @@ if __name__ == '__main__':
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
+    gt_im_data = gt_im_data.cuda()
 
   # make variable
   im_data = Variable(im_data, volatile=True)
   im_info = Variable(im_info, volatile=True)
   num_boxes = Variable(num_boxes, volatile=True)
   gt_boxes = Variable(gt_boxes, volatile=True)
+  gt_im_data = Variable(gt_im_data, volatile=True)
 
   if args.cuda:
     cfg.CUDA = True
@@ -234,14 +237,16 @@ if __name__ == '__main__':
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
+      gt_im_data.data.resize_(data[4].size()).copy_(data[4])
 
       det_tic = time.time()
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label, gt_cls_prob = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, gt_im_data)
 
       scores = cls_prob.data
+      gt_scores = gt_cls_prob.data
       boxes = rois.data[:, :, 1:5]
 
       if cfg.TEST.BBOX_REG:
